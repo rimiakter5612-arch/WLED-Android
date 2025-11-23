@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ca.cgagnier.wlednativeandroid.repository.DeviceRepository
+import ca.cgagnier.wlednativeandroid.repository.UserPreferencesRepository
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.service.websocket.WebsocketClient
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,18 +12,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 private const val TAG = "DeviceWebsocketListViewModel"
 
 @HiltViewModel
 class DeviceWebsocketListViewModel @Inject constructor(
-    deviceRepository: DeviceRepository
+    deviceRepository: DeviceRepository,
+    userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
+    private val showHiddenDevices = userPreferencesRepository.showHiddenDevices
     private val activeClients = MutableStateFlow<Map<String, WebsocketClient>>(emptyMap())
     private val devicesFromDb = deviceRepository.allDevices
 
@@ -74,16 +77,48 @@ class DeviceWebsocketListViewModel @Inject constructor(
         }
     }
 
+    // This is the unfiltered list of devices with their real-time state.
+    private val allDevicesWithState: StateFlow<List<DeviceWithState>> =
+        activeClients.map { clients ->
+            clients.values.map { it.deviceState }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val devicesWithState: StateFlow<List<DeviceWithState>> =
-        combine(devicesFromDb, activeClients) { devices, clients ->
-            clients.values.map { client ->
-                client.deviceState
+        combine(allDevicesWithState, showHiddenDevices) { devices, showHidden ->
+            // Handles the preference to show or hide hidden devices
+            if (showHidden) {
+                devices
+            } else {
+                devices.filter { !it.device.isHidden }
             }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    // Determine if the "some devices are hidden" message should be shown.
+    val shouldShowDevicesAreHidden: StateFlow<Boolean> =
+        combine(devicesWithState, showHiddenDevices) { filteredDevices, showHidden ->
+            // Message appears if:
+            // 1. The *filtered* list is empty.
+            // 2. The user has chosen *not* to show hidden devices.
+            // 3. There is at least one hidden device in the database.
+            if (filteredDevices.isEmpty() && !showHidden) {
+                deviceRepository.hasHiddenDevices()
+            } else {
+                false
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
 
     override fun onCleared() {
         super.onCleared()

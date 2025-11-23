@@ -61,8 +61,7 @@ fun DeviceList(
     deviceWebsocketListViewModel: DeviceWebsocketListViewModel = hiltViewModel(),
 ) {
     val devices by deviceWebsocketListViewModel.devicesWithState.collectAsStateWithLifecycle()
-    // TODO: fix this after migration to websockets
-    val shouldShowDevicesAreHidden = false
+    val shouldShowDevicesAreHidden by deviceWebsocketListViewModel.shouldShowDevicesAreHidden.collectAsStateWithLifecycle()
 
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -85,7 +84,7 @@ fun DeviceList(
                 onAddDevice = onAddDevice,
             )
         },
-        ) { innerPadding ->
+    ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier.padding(innerPadding),
             state = pullToRefreshState,
@@ -119,7 +118,9 @@ fun DeviceList(
                     //        )
                     //    }
                     //}
-                    itemsIndexed(devices, key = { _, device -> device.device.macAddress }) { _, device ->
+                    itemsIndexed(
+                        devices,
+                        key = { _, device -> device.device.macAddress }) { _, device ->
                         var isConfirmingDelete by remember { mutableStateOf(false) }
                         val swipeDismissState = rememberSwipeToDismissBoxState(
                             positionalThreshold = { distance -> distance * 0.3f },
