@@ -17,7 +17,7 @@ data class Device(
 
     val address: String,
 
-    val isHidden: Boolean,
+    val isHidden: Boolean = false,
 
     @ColumnInfo(defaultValue = "")
     val originalName: String = "",
@@ -32,7 +32,7 @@ data class Device(
     val branch: Branch = Branch.UNKNOWN,
 
     @ColumnInfo(defaultValue = "UNKNOWN")
-    val lastSeen: Long,
+    val lastSeen: Long = System.currentTimeMillis(),
 ) : Parcelable {
 
     fun getDeviceUrl(): String {

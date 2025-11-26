@@ -68,6 +68,7 @@
     <string name="show_error">Show Error</string>
     <string name="hide_error">Hide Error</string>
     <string name="unknown_error">Unknown Error</string>
+    <string name="success">Success!</string>
     <string name="update_channel">Update Channel</string>
     <string name="stable">Stable</string>
     <string name="beta">Beta</string>

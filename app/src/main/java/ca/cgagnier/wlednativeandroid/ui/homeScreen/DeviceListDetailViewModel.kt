@@ -57,8 +57,8 @@ class DeviceListDetailViewModel @Inject constructor(
         }
     )
 
-    private val _isAddDeviceBottomSheetVisible = MutableStateFlow(false)
-    val isAddDeviceBottomSheetVisible: StateFlow<Boolean> = _isAddDeviceBottomSheetVisible
+    private val _isAddDeviceDialogVisible = MutableStateFlow(false)
+    val isAddDeviceDialogVisible: StateFlow<Boolean> = _isAddDeviceDialogVisible
 
     private fun startDiscoveryService() {
         Log.i(TAG, "Start device discovery")
@@ -138,13 +138,13 @@ class DeviceListDetailViewModel @Inject constructor(
         preferencesRepository.updateShowHiddenDevices(!showHiddenDevices.value)
     }
 
-    fun showAddDeviceBottomSheet() {
-        _isAddDeviceBottomSheetVisible.update {
+    fun showAddDeviceDialog() {
+        _isAddDeviceDialogVisible.update {
             true
         }
     }
-    fun hideAddDeviceBottomSheet() {
-        _isAddDeviceBottomSheetVisible.update {
+    fun hideAddDeviceDialog() {
+        _isAddDeviceDialogVisible.update {
             false
         }
     }

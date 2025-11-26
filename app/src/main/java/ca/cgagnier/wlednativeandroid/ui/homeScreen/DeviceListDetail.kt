@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -21,14 +20,11 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -40,7 +36,6 @@ import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +54,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ca.cgagnier.wlednativeandroid.BuildConfig
 import ca.cgagnier.wlednativeandroid.R
-import ca.cgagnier.wlednativeandroid.model.StatefulDevice
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.ui.homeScreen.detail.DeviceDetail
 import ca.cgagnier.wlednativeandroid.ui.homeScreen.deviceAdd.DeviceAdd
@@ -96,13 +90,10 @@ fun DeviceListDetail(
 
     val showHiddenDevices by viewModel.showHiddenDevices.collectAsStateWithLifecycle()
     val isWLEDCaptivePortal by viewModel.isWLEDCaptivePortal.collectAsStateWithLifecycle()
-    val isAddDeviceBottomSheetVisible by viewModel.isAddDeviceBottomSheetVisible.collectAsStateWithLifecycle()
+    val isAddDeviceDialogVisible by viewModel.isAddDeviceDialogVisible.collectAsStateWithLifecycle()
     val addDevice = {
-        viewModel.showAddDeviceBottomSheet()
+        viewModel.showAddDeviceDialog()
     }
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
 
     // TODO: Check if these life cycle events could be replaced by a custom hook or by
     //  moving it to a lifecycle aware viewModel or something? To investigate :)
@@ -242,10 +233,12 @@ fun DeviceListDetail(
     }
 
 
-    if (isAddDeviceBottomSheetVisible) {
-        AddDeviceBottomSheet(sheetState, onDismissRequest = {
-            viewModel.hideAddDeviceBottomSheet()
-        })
+    if (isAddDeviceDialogVisible) {
+        DeviceAdd(
+            onDismissRequest = {
+                viewModel.hideAddDeviceDialog()
+            }
+        )
     }
 }
 
@@ -258,7 +251,7 @@ private fun DrawerContent(
 ) {
     val uriHandler = LocalUriHandler.current
 
-    Column() {
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -393,29 +386,5 @@ fun SelectDeviceView() {
             )
             Text(stringResource(R.string.select_a_device_from_the_list))
         }
-    }
-}
-
-@Composable
-private fun AddDeviceBottomSheet(
-    sheetState: SheetState,
-    onDismissRequest: () -> Unit,
-) {
-    val coroutineScope = rememberCoroutineScope()
-    ModalBottomSheet(
-        modifier = Modifier.fillMaxHeight(),
-        sheetState = sheetState,
-        onDismissRequest = onDismissRequest,
-    ) {
-        DeviceAdd(
-            sheetState = sheetState,
-            deviceAdded = {
-                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                    if (!sheetState.isVisible) {
-                        onDismissRequest()
-                    }
-                }
-            },
-        )
     }
 }

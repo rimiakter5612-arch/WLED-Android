@@ -254,7 +254,7 @@ fun DeviceEditAppBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.edit_device_with_name, deviceName(device)),
+                text = stringResource(R.string.edit_device_with_name, deviceName(device.device)),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

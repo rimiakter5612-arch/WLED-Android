@@ -78,7 +78,7 @@ private fun TopHeader(device: DeviceWithState) {
             )
             Row {
                 Text(
-                    deviceName(device) + " - " + device.device.address,
+                    deviceName(device.device) + " - " + device.device.address,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

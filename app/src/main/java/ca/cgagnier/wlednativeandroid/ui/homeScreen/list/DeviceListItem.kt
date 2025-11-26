@@ -234,7 +234,7 @@ fun DeviceInfoTwoRows(
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                deviceName(device),
+                deviceName(device.device),
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = nameMaxLines,
                 overflow = TextOverflow.Ellipsis

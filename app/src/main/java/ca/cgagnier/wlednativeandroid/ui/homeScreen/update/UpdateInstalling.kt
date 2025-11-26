@@ -78,7 +78,7 @@ fun UpdateInstallingDialog(
             Text(
                 stringResource(
                     R.string.updating,
-                    deviceName(device)
+                    deviceName(device.device)
                 )
             )
         },
@@ -180,7 +180,7 @@ private fun UpdateInstallingStatus(
             modifier = modifier,
             painter = painterResource(R.drawable.ic_twotone_check_circle_outline_24),
             contentDescription = stringResource(R.string.update_completed),
-            tint = Color(0xFF00b300)
+            tint = Color(0xFF00b300) // Green
         )
     }
 }
