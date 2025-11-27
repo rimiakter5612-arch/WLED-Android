@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -59,8 +61,11 @@ fun DeviceList(
     onOpenDrawer: () -> Unit,
     viewModel: DeviceWebsocketListViewModel = hiltViewModel(),
 ) {
-    val devices by viewModel.devicesWithState.collectAsStateWithLifecycle()
+    val allDevices by viewModel.devicesWithState.collectAsStateWithLifecycle()
+    val onlineDevices by viewModel.onlineDevices.collectAsStateWithLifecycle()
+    val offlineDevices by viewModel.offlineDevices.collectAsStateWithLifecycle()
     val shouldShowDevicesAreHidden by viewModel.shouldShowDevicesAreHidden.collectAsStateWithLifecycle()
+    val showOfflineDevicesLast by viewModel.showOfflineDevicesLast.collectAsStateWithLifecycle()
 
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -104,7 +109,7 @@ fun DeviceList(
                     .padding(horizontal = 6.dp)
                     .clip(shape = MaterialTheme.shapes.large),
             ) {
-                if (devices.isEmpty()) {
+                if (allDevices.isEmpty()) {
                     item {
                         NoDevicesItem(
                             modifier = Modifier.fillParentMaxSize(),
@@ -125,64 +130,154 @@ fun DeviceList(
                     //        )
                     //    }
                     //}
-                    itemsIndexed(
-                        devices,
-                        key = { _, device -> device.device.macAddress }) { _, device ->
-                        var isConfirmingDelete by remember { mutableStateOf(false) }
-                        val swipeDismissState = rememberSwipeToDismissBoxState(
-                            positionalThreshold = { distance -> distance * 0.3f },
+                    if (showOfflineDevicesLast) {
+                        onlineOfflineDevicesList(
+                            onlineDevices = onlineDevices,
+                            offlineDevices = offlineDevices,
+                            selectedDevice = selectedDevice,
+                            onItemClick = onItemClick,
+                            onItemEdit = onItemEdit,
+                            viewModel = viewModel
                         )
-                        DeviceListItem(
-                            device = device,
-                            isSelected = device.device.macAddress == selectedDevice?.device?.macAddress,
-                            onClick = { onItemClick(device) },
-                            swipeToDismissBoxState = swipeDismissState,
-                            onDismiss = { direction ->
-                                if (direction == SwipeToDismissBoxValue.EndToStart) {
-                                    isConfirmingDelete = true
-                                } else if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                                    coroutineScope.launch {
-                                        swipeDismissState.reset()
-                                        onItemEdit(device)
-                                    }
-                                }
-                            },
-                            onPowerSwitchToggle = { isOn ->
-                                viewModel.setDevicePower(device, isOn)
-                            },
-                            onBrightnessChanged = { brightness ->
-                                viewModel.setBrightness(device, brightness)
-                            },
-                            modifier = Modifier.animateItem()
+                    } else {
+                        allDevicesList(
+                            devices = allDevices,
+                            selectedDevice = selectedDevice,
+                            onItemClick = onItemClick,
+                            onItemEdit = onItemEdit,
+                            viewModel = viewModel
                         )
-                        LaunchedEffect(isConfirmingDelete) {
-                            if (!isConfirmingDelete) {
-                                swipeDismissState.reset()
-                            }
-                        }
-
-                        if (isConfirmingDelete) {
-                            ConfirmDeleteDialog(
-                                device = device,
-                                onConfirm = {
-                                    coroutineScope.launch {
-                                        swipeDismissState.reset()
-                                        isConfirmingDelete = false
-                                        viewModel.deleteDevice(device.device)
-                                    }
-                                },
-                                onDismiss = {
-                                    isConfirmingDelete = false
-                                }
-                            )
-                        }
                     }
+
+                    // This spacer is so that the last item of the list can be scrolled a bit
+                    // further than just the bottom of the screen.
                     item {
                         Spacer(Modifier.padding(42.dp))
                     }
                 }
             }
         }
+    }
+}
+
+fun LazyListScope.allDevicesList(
+    devices: List<DeviceWithState>,
+    selectedDevice: DeviceWithState?,
+    onItemClick: (DeviceWithState) -> Unit,
+    onItemEdit: (DeviceWithState) -> Unit,
+    viewModel: DeviceWebsocketListViewModel
+) {
+    itemsIndexed(
+        devices,
+        key = { _, device -> device.device.macAddress }) { _, device ->
+
+        DeviceRow(
+            device = device,
+            isSelected = device.device.macAddress == selectedDevice?.device?.macAddress,
+            onClick = onItemClick,
+            onEdit = onItemEdit,
+            viewModel = viewModel
+        )
+    }
+}
+
+fun LazyListScope.onlineOfflineDevicesList(
+    onlineDevices: List<DeviceWithState>,
+    offlineDevices: List<DeviceWithState>,
+    selectedDevice: DeviceWithState?,
+    onItemClick: (DeviceWithState) -> Unit,
+    onItemEdit: (DeviceWithState) -> Unit,
+    viewModel: DeviceWebsocketListViewModel
+) {
+    itemsIndexed(
+        onlineDevices,
+        key = { _, device -> device.device.macAddress }) { _, device ->
+
+        DeviceRow(
+            device = device,
+            isSelected = device.device.macAddress == selectedDevice?.device?.macAddress,
+            onClick = onItemClick,
+            onEdit = onItemEdit,
+            viewModel = viewModel
+        )
+    }
+    if (offlineDevices.isNotEmpty()) {
+        item {
+            // TODO: i18n this
+            Text("Offline Devices")
+        }
+        itemsIndexed(
+            offlineDevices,
+            key = { _, device -> device.device.macAddress }) { _, device ->
+
+            DeviceRow(
+                device = device,
+                isSelected = device.device.macAddress == selectedDevice?.device?.macAddress,
+                onClick = onItemClick,
+                onEdit = onItemEdit,
+                viewModel = viewModel
+            )
+        }
+    }
+}
+
+@Composable
+fun LazyItemScope.DeviceRow(
+    device: DeviceWithState,
+    isSelected: Boolean,
+    onClick: (DeviceWithState) -> Unit,
+    onEdit: (DeviceWithState) -> Unit,
+    viewModel: DeviceWebsocketListViewModel
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var isConfirmingDelete by remember { mutableStateOf(false) }
+    val swipeDismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { distance -> distance * 0.3f },
+    )
+
+    DeviceListItem(
+        device = device,
+        isSelected = isSelected,
+        onClick = { onClick(device) },
+        swipeToDismissBoxState = swipeDismissState,
+        onDismiss = { direction ->
+            if (direction == SwipeToDismissBoxValue.EndToStart) {
+                isConfirmingDelete = true
+            } else if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                coroutineScope.launch {
+                    swipeDismissState.reset()
+                    onEdit(device)
+                }
+            }
+        },
+        onPowerSwitchToggle = { isOn ->
+            viewModel.setDevicePower(device, isOn)
+        },
+        onBrightnessChanged = { brightness ->
+            viewModel.setBrightness(device, brightness)
+        },
+        modifier = Modifier.animateItem()
+    )
+    LaunchedEffect(isConfirmingDelete) {
+        if (!isConfirmingDelete) {
+            swipeDismissState.reset()
+        }
+    }
+
+    if (isConfirmingDelete) {
+        ConfirmDeleteDialog(
+            device = device,
+            onConfirm = {
+                coroutineScope.launch {
+                    swipeDismissState.reset()
+                    isConfirmingDelete = false
+                    viewModel.deleteDevice(device.device)
+                }
+            },
+            onDismiss = {
+                isConfirmingDelete = false
+            }
+        )
     }
 }
 

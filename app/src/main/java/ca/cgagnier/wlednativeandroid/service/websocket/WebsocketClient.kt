@@ -167,7 +167,7 @@ class WebsocketClient(device: Device, private val deviceRepository: DeviceReposi
         // Trying to update the state when the device is offline should trigger a reconnection.
         // This is so that a user playing with the UI causes the device to reconnect if it
         // isn't trying to reconnect automatically for some reason.
-        if (!isConnecting) {
+        if (!deviceState.isWebsocketConnected.value) {
             Log.w(TAG, "Not connected to ${deviceState.device.address}")
             connect()
         }

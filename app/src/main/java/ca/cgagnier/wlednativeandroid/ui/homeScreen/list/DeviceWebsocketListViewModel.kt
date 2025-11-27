@@ -1,10 +1,12 @@
 package ca.cgagnier.wlednativeandroid.ui.homeScreen.list
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ca.cgagnier.wlednativeandroid.R
 import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.model.wledapi.State
 import ca.cgagnier.wlednativeandroid.repository.DeviceRepository
@@ -12,6 +14,7 @@ import ca.cgagnier.wlednativeandroid.repository.UserPreferencesRepository
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.service.websocket.WebsocketClient
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,15 +30,27 @@ private const val TAG = "DeviceWebsocketListViewModel"
 @HiltViewModel
 class DeviceWebsocketListViewModel @Inject constructor(
     private val deviceRepository: DeviceRepository,
-    userPreferencesRepository: UserPreferencesRepository
+    userPreferencesRepository: UserPreferencesRepository,
+    @param:ApplicationContext private val context: Context
 ) : ViewModel(), DefaultLifecycleObserver {
     private val showHiddenDevices = userPreferencesRepository.showHiddenDevices
     private val activeClients = MutableStateFlow<Map<String, WebsocketClient>>(emptyMap())
     private val devicesFromDb = deviceRepository.allDevices
 
+    val showOfflineDevicesLast = userPreferencesRepository.showOfflineDevicesLast
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     // Track if the ViewModel is paused or not. It would be paused if the app is in the
     // background, for example.
     private val isPaused = MutableStateFlow(false)
+
+    // Helper to get the default name for sorting
+    private val defaultDeviceName = context.getString(R.string.default_device_name)
+
 
     // TODO: Add support for showing offline devices last
     init {
@@ -78,6 +93,7 @@ class DeviceWebsocketListViewModel @Inject constructor(
                             }
                             nextClients[macAddress] = newClient
                         } else {
+                            Log.d(TAG, "[Scan] Device updated: $macAddress.")
                             existingClient.updateDevice(device)
                             nextClients[macAddress] = existingClient
                         }
@@ -115,7 +131,9 @@ class DeviceWebsocketListViewModel @Inject constructor(
         activeClients.value.values.forEach { it.connect() }
     }
 
-    // This is the unfiltered list of devices with their real-time state.
+    /**
+     * List of all devices with their real-time state.
+     */
     private val allDevicesWithState: StateFlow<List<DeviceWithState>> =
         activeClients.map { clients ->
             clients.values.map { it.deviceState }
@@ -125,14 +143,51 @@ class DeviceWebsocketListViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    /**
+     * List of all devices with their real-time state, filtered by the user's preferences.
+     *
+     * This decides if hidden devices are shown or not
+     */
     val devicesWithState: StateFlow<List<DeviceWithState>> =
         combine(allDevicesWithState, showHiddenDevices) { devices, showHidden ->
             // Handles the preference to show or hide hidden devices
             if (showHidden) {
                 devices
+                    // TODO: the order doesn't seem to update when devices are renamed in the database
+                    .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) {
+                        getDisplayName(it.device)
+                    })
             } else {
                 devices.filter { !it.device.isHidden }
+                    .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) {
+                        getDisplayName(it.device)
+                    })
             }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val onlineDevices: StateFlow<List<DeviceWithState>> =
+        // TODO: Currently, the list won't update if a device becomes offline/online
+        devicesWithState.map { devices ->
+            devices.filter { it.isWebsocketConnected.value }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) {
+                    getDisplayName(it.device)
+                })
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val offlineDevices: StateFlow<List<DeviceWithState>> =
+        devicesWithState.map { devices ->
+            devices.filter { !it.isWebsocketConnected.value }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) {
+                    getDisplayName(it.device)
+                })
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -204,5 +259,11 @@ class DeviceWebsocketListViewModel @Inject constructor(
             Log.d(TAG, "Deleting device ${device.originalName} - ${device.address}")
             deviceRepository.delete(device)
         }
+    }
+
+    private fun getDisplayName(device: Device): String {
+        return device.customName.trim().takeIf { it.isNotBlank() }
+            ?: device.originalName.trim().takeIf { it.isNotBlank() }
+            ?: defaultDeviceName
     }
 }

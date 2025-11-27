@@ -239,7 +239,7 @@ private fun CustomNameTextField(
     LaunchedEffect(key1 = inputText.text) {
         if (deviceName == inputText.text)
             return@LaunchedEffect
-        delay(2000)
+        delay(800)
         onValueChange(inputText.text)
     }
 }
