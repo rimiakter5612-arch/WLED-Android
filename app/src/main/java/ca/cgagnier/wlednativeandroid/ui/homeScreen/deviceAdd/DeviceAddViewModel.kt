@@ -1,5 +1,6 @@
 package ca.cgagnier.wlednativeandroid.ui.homeScreen.deviceAdd
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +10,7 @@ import ca.cgagnier.wlednativeandroid.R
 import ca.cgagnier.wlednativeandroid.domain.use_case.ValidateAddress
 import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.repository.DeviceRepository
+import ca.cgagnier.wlednativeandroid.service.DeviceFirstContactService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "DeviceAddViewModel"
 
 @HiltViewModel
 class DeviceAddViewModel @Inject constructor(
@@ -53,33 +57,30 @@ class DeviceAddViewModel @Inject constructor(
     private suspend fun findDevice() {
         state = state.copy(step = DeviceAddStep.Adding)
 
-        // TODO: Launch device connection here or something
-        delay(5000)
-
-        // If the dialog was closed before we got here, don't update the state
-        if (!currentCoroutineContext().isActive) {
-            return
-        }
-        // TODO: Add error check here
-        if (false) {
+        val firstContactService = DeviceFirstContactService(repository)
+        try {
+            val newDevice = firstContactService.fetchAndUpsertDevice(state.address)
+            // If the dialog was closed before we got here, don't update the state
+            if (!currentCoroutineContext().isActive) {
+                return
+            }
+            state = state.copy(
+                step = DeviceAddStep.Success(
+                    device = newDevice
+                )
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Error during first contact", e)
+            // If the dialog was closed before we got here, don't update the state
+            if (!currentCoroutineContext().isActive) {
+                return
+            }
             state = state.copy(
                 step = DeviceAddStep.Form(
-                    // TODO: Put correct error messages
-                    addressError = R.string.leave_this_empty_to_use_the_device_name
+                    addressError = R.string.add_device_error
                 )
             )
-            return
         }
-        state = state.copy(
-            step = DeviceAddStep.Success(
-                device = Device(
-                    state.address,
-                    state.address,
-                    originalName = state.address
-                )
-            )
-        )
-
     }
 
     /**

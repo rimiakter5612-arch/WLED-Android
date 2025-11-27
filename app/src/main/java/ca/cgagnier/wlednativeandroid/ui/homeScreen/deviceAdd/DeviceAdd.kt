@@ -167,15 +167,14 @@ private fun step1AddressForm(
 
 @Composable
 private fun step2Loading(state: DeviceAddState) {
-    // TODO: Replace this by a `LoadingIndicator` once it is out of experimental
+    // TODO: Replace this by a `LoadingIndicator` once it is available/out of experimental
     CircularProgressIndicator(
         modifier = Modifier
             .height(48.dp)
             .width(48.dp),
     )
-    // TODO: i18n this string
     Text(
-        "Adding " + state.address,
+        stringResource(R.string.add_adding_device, state.address),
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(12.dp),
         maxLines = 1,
@@ -201,8 +200,7 @@ private fun step3Complete(
         modifier = Modifier.padding(top = 12.dp)
     )
     Text(
-        // TODO: i18n this string
-        deviceName(step.device) + " was added",
+        stringResource(R.string.add_device_added, deviceName(step.device)),
         maxLines = 1,
         overflow = TextOverflow.MiddleEllipsis
     )

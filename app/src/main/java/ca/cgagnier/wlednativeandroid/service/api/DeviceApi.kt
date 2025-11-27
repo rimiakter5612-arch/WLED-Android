@@ -1,6 +1,7 @@
 package ca.cgagnier.wlednativeandroid.service.api
 
 import ca.cgagnier.wlednativeandroid.model.wledapi.DeviceStateInfo
+import ca.cgagnier.wlednativeandroid.model.wledapi.Info
 import ca.cgagnier.wlednativeandroid.model.wledapi.JsonPost
 import ca.cgagnier.wlednativeandroid.model.wledapi.State
 import okhttp3.MultipartBody
@@ -15,6 +16,9 @@ import retrofit2.http.Part
 interface DeviceApi {
     @GET("json/si")
     suspend fun getStateInfo(): Response<DeviceStateInfo>
+
+    @GET("json/info")
+    suspend fun getInfo(): Response<Info>
 
     @POST("json/state")
     suspend fun postJson(@Body requestBody: JsonPost): Response<State>
