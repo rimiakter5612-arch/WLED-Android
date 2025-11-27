@@ -82,7 +82,7 @@ fun DeviceListDetail(
         rememberListDetailPaneScaffoldNavigator<Any>(scaffoldDirective = customScaffoldDirective)
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    val devices by deviceWebsocketListViewModel.devicesWithState.collectAsStateWithLifecycle()
+    val devices by deviceWebsocketListViewModel.allDevicesWithState.collectAsStateWithLifecycle()
     val selectedDeviceMacAddress = navigator.currentDestination?.contentKey as? String
     val selectedDevice = remember(devices, selectedDeviceMacAddress) {
         devices.firstOrNull { it.device.macAddress == selectedDeviceMacAddress }

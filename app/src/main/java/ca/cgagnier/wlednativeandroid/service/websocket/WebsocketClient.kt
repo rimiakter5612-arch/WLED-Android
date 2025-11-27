@@ -97,6 +97,7 @@ class WebsocketClient(device: Device, private val deviceRepository: DeviceReposi
                 "WebSocket failure for ${deviceState.device.address}: ${t.message}",
                 t
             )
+            this@WebsocketClient.webSocket = null
             deviceState.isWebsocketConnected.value = false
             isConnecting = false
             reconnect()
