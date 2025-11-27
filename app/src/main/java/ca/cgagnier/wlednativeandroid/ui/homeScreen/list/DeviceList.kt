@@ -102,6 +102,7 @@ fun DeviceList(
     val refresh: () -> Unit = {
         isRefreshing = true
         onRefresh()
+        viewModel.refreshOfflineDevices()
         coroutineScope.launch {
             delay(1800)
             isRefreshing = false

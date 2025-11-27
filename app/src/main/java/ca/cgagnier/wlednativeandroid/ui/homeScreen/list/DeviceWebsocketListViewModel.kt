@@ -145,6 +145,17 @@ class DeviceWebsocketListViewModel @Inject constructor(
     }
 
     /**
+     * Attempts to reconnect to all offline devices.
+     */
+    fun refreshOfflineDevices() {
+        Log.d(TAG, "Refreshing offline devices.")
+        val offlineClients = activeClients.value.values.filter { !it.deviceState.isWebsocketConnected.value }
+        offlineClients.forEach {
+            it.connect()
+        }
+    }
+
+    /**
      * Sets the brightness for a specific device.
      *
      * @param device The device to update.
