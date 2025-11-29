@@ -12,6 +12,40 @@ import ca.cgagnier.wlednativeandroid.service.api.github.GithubApi
 import com.vdurmont.semver4j.Semver
 import java.io.File
 
+enum class UpdateSourceType {
+    OFFICIAL_WLED, QUINLED, CUSTOM
+}
+
+data class UpdateSourceDefinition(
+    val type: UpdateSourceType,
+    val brandPattern: String,
+    val productPattern: String,
+    val githubOwner: String,
+    val githubRepo: String
+)
+
+object UpdateSourceRegistry {
+    val sources = listOf(
+        UpdateSourceDefinition(
+            UpdateSourceType.OFFICIAL_WLED, "WLED", "FOSS", "Aircoookie", "WLED"
+        ),
+        // TODO: Confirm these values for QUINLED
+        UpdateSourceDefinition(
+            UpdateSourceType.QUINLED, "WLED", "QuinnLED", "QuinLED", "WLED-Quin"
+        )
+    )
+
+    fun getSource(info: Info): UpdateSourceDefinition? {
+        return sources.find {
+            info.brand == it.brandPattern && info.product?.contains(it.productPattern) == true
+        }
+    }
+}
+
+
+// Below that line, "old" "legacy" code from before the websocket refactoring
+// TODO: clean this up, either by moving it above this line or by removing it
+
 private const val TAG = "updateService"
 private const val WLED_BRAND = "WLED"
 private const val WLED_PRODUCT = "FOSS"
@@ -28,12 +62,17 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
      * @return The newest version if it is newer than versionName and different than ignoreVersion,
      *      otherwise an empty string.
      */
-    suspend fun getNewerReleaseTag(deviceInfo: Info, branch: Branch, ignoreVersion: String): String {
+    suspend fun getNewerReleaseTag(
+        deviceInfo: Info,
+        branch: Branch,
+        ignoreVersion: String,
+        updateSourceDefinition: UpdateSourceDefinition,
+    ): String {
         if (deviceInfo.version.isNullOrEmpty()) {
             return ""
         }
-        // This would need some major refactoring in order to support different sources for OTA.
-        if (deviceInfo.brand != WLED_BRAND || deviceInfo.product != WLED_PRODUCT) {
+
+        if (deviceInfo.brand != updateSourceDefinition.brandPattern || deviceInfo.product != updateSourceDefinition.productPattern) {
             return ""
         }
 
@@ -42,18 +81,30 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
             return ""
         }
 
+        // TODO: Modify this to use repositoryOwner and repositoryName
         val latestVersion = getLatestVersionWithAssets(branch) ?: return ""
         if (latestVersion.version.tagName == ignoreVersion) {
             return ""
         }
 
         val betaSuffixes = listOf("-a", "-b", "-rc")
-        Log.w(TAG, "Device ${deviceInfo.ipAddress}: ${deviceInfo.version} to ${latestVersion.version.tagName}")
-        if (branch == Branch.STABLE && betaSuffixes.any { deviceInfo.version.contains(it, ignoreCase = true)}) {
+        Log.w(
+            TAG,
+            "Device ${deviceInfo.ipAddress}: ${deviceInfo.version} to ${latestVersion.version.tagName}"
+        )
+        if (branch == Branch.STABLE && betaSuffixes.any {
+                deviceInfo.version.contains(
+                    it, ignoreCase = true
+                )
+            }) {
             // If we're on a beta branch but looking for a stable branch, always offer to "update" to
             // the stable branch.
             return latestVersion.version.tagName
-        } else if (branch == Branch.BETA && betaSuffixes.none { deviceInfo.version.contains(it, ignoreCase = true)}) {
+        } else if (branch == Branch.BETA && betaSuffixes.none {
+                deviceInfo.version.contains(
+                    it, ignoreCase = true
+                )
+            }) {
             // Same if we are on a stable branch but looking for a beta branch, we should offer to
             // "update" to the latest beta branch, even if its older.
             return latestVersion.version.tagName
@@ -61,8 +112,7 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
 
         try {
             return if (Semver(
-                    latestVersion.version.tagName.drop(1),
-                    Semver.SemverType.LOOSE
+                    latestVersion.version.tagName.drop(1), Semver.SemverType.LOOSE
                 ).isGreaterThan(deviceInfo.version)
             ) {
                 latestVersion.version.tagName
@@ -103,8 +153,7 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
 
         Log.i(
             TAG,
-            "Inserting " + versionModels.count() + " versions with " +
-                    assetsModels.count() + " assets"
+            "Inserting " + versionModels.count() + " versions with " + assetsModels.count() + " assets"
         )
         versionWithAssetsRepository.insertMany(versionModels, assetsModels)
     }
