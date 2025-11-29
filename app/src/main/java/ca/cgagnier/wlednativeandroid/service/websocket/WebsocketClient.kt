@@ -100,7 +100,7 @@ class WebsocketClient(
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            Log.e(
+            Log.w(
                 TAG,
                 "WebSocket failure for ${deviceState.device.address}: ${t.message}",
                 t

@@ -142,7 +142,6 @@ fun DeviceEdit(
                                     viewModel.updateDeviceBranch(
                                         device.device,
                                         option.first,
-                                        context
                                     )
                                 },
                                 selected = option.first == device.device.branch
@@ -170,7 +169,7 @@ fun DeviceEdit(
                                 device,
                                 currentUpdateTag,
                                 seeUpdateDetails = {
-                                    // viewModel.showUpdateDetails(device)
+                                    viewModel.showUpdateDetails(currentUpdateTag)
                                 }
                             )
                         } else {
@@ -178,8 +177,7 @@ fun DeviceEdit(
                                 device,
                                 isCheckingUpdates,
                                 checkForUpdate = {
-                                    // TODO: Fix this update thing
-                                    // viewModel.checkForUpdates(device, context)
+                                    viewModel.checkForUpdates(device.device, context)
                                 }
                             )
                         }
@@ -249,7 +247,7 @@ private fun CustomNameTextField(
             .fillMaxWidth()
             .padding(top = 4.dp)
     )
-    // Only save after changes and after typing has stopped for at least 2 seconds
+    // Only save after changes and after typing has stopped for at least 0.8 seconds
     LaunchedEffect(key1 = inputText.text) {
         if (deviceName == inputText.text)
             return@LaunchedEffect
