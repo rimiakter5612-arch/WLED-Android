@@ -17,6 +17,7 @@ import ca.cgagnier.wlednativeandroid.repository.migrations.UserPreferencesV0ToV1
 import ca.cgagnier.wlednativeandroid.service.NetworkConnectivityManager
 import ca.cgagnier.wlednativeandroid.service.device.StateFactory
 import ca.cgagnier.wlednativeandroid.service.device.api.JsonApiRequestHandler
+import ca.cgagnier.wlednativeandroid.service.update.ReleaseService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,8 +35,7 @@ private val Context.userPreferencesStore: DataStore<UserPreferences> by dataStor
     serializer = UserPreferencesSerializer(),
     produceMigrations = { _ ->
         listOf(UserPreferencesV0ToV1())
-    }
-)
+    })
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -86,6 +86,12 @@ object AppContainer {
 
     @Provides
     @Singleton
+    fun providesReleaseService(versionWithAssetsRepository: VersionWithAssetsRepository): ReleaseService {
+        return ReleaseService(versionWithAssetsRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideStateFactory(): StateFactory {
         return StateFactory(JsonApiRequestHandler())
     }
@@ -115,8 +121,7 @@ object AppContainer {
     @Provides
     @Singleton
     fun providesNetworkConnectivityManager(
-        @ApplicationContext appContext: Context,
-        coroutineScope: CoroutineScope
+        @ApplicationContext appContext: Context, coroutineScope: CoroutineScope
     ): NetworkConnectivityManager {
         return NetworkConnectivityManager(appContext, coroutineScope)
     }

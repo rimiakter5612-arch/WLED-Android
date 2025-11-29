@@ -5,6 +5,7 @@ import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.model.wledapi.DeviceStateInfo
 import ca.cgagnier.wlednativeandroid.model.wledapi.State
 import ca.cgagnier.wlednativeandroid.repository.DeviceRepository
+import ca.cgagnier.wlednativeandroid.service.update.DeviceUpdateManager
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.CoroutineScope
@@ -21,9 +22,13 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.min
 import kotlin.math.pow
 
-class WebsocketClient(device: Device, private val deviceRepository: DeviceRepository) {
+class WebsocketClient(
+    device: Device,
+    private val deviceRepository: DeviceRepository,
+    deviceUpdateManager: DeviceUpdateManager
+) {
 
-    val deviceState: DeviceWithState = DeviceWithState(device)
+    val deviceState: DeviceWithState = DeviceWithState(device, deviceUpdateManager)
 
     private var webSocket: WebSocket? = null
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -66,12 +71,15 @@ class WebsocketClient(device: Device, private val deviceRepository: DeviceReposi
                 if (deviceStateInfo != null) {
                     deviceState.stateInfo.value = deviceStateInfo
 
+                    // Update information about the device when we receive a message.
                     // Ideally, this should probably not be done in the client directly
                     coroutineScope.launch {
                         val newDevice = deviceState.device.copy(
                             originalName = deviceStateInfo.info.name,
                             address = deviceState.device.address,
                             lastSeen = System.currentTimeMillis()
+                            // TODO: Add logic to update the device branch (stable/beta) if the
+                            //  current branch is "UNKNOWN".
                         )
                         deviceRepository.update(newDevice)
                     }

@@ -9,6 +9,7 @@ import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.model.wledapi.State
 import ca.cgagnier.wlednativeandroid.repository.DeviceRepository
 import ca.cgagnier.wlednativeandroid.repository.UserPreferencesRepository
+import ca.cgagnier.wlednativeandroid.service.update.DeviceUpdateManager
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.service.websocket.WebsocketClient
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,8 +26,9 @@ private const val TAG = "DeviceWebsocketListViewModel"
 
 @HiltViewModel
 class DeviceWebsocketListViewModel @Inject constructor(
-    private val deviceRepository: DeviceRepository,
     userPreferencesRepository: UserPreferencesRepository,
+    private val deviceRepository: DeviceRepository,
+    private val deviceUpdateManager: DeviceUpdateManager
 ) : ViewModel(), DefaultLifecycleObserver {
     private val activeClients = MutableStateFlow<Map<String, WebsocketClient>>(emptyMap())
     private val devicesFromDb = deviceRepository.allDevices
@@ -70,7 +72,8 @@ class DeviceWebsocketListViewModel @Inject constructor(
                         if (existingClient == null) {
                             // Device added: create and connect a new client.
                             Log.d(TAG, "[Scan] Device added: $macAddress. Creating client.")
-                            val newClient = WebsocketClient(device, deviceRepository)
+                            val newClient =
+                                WebsocketClient(device, deviceRepository, deviceUpdateManager)
                             if (!isPaused.value) {
                                 newClient.connect()
                             }
@@ -82,7 +85,8 @@ class DeviceWebsocketListViewModel @Inject constructor(
                                 "[Scan] Device address changed for $macAddress. Reconnecting client."
                             )
                             existingClient.destroy()
-                            val newClient = WebsocketClient(device, deviceRepository)
+                            val newClient =
+                                WebsocketClient(device, deviceRepository, deviceUpdateManager)
                             if (!isPaused.value) {
                                 newClient.connect()
                             }
@@ -149,7 +153,8 @@ class DeviceWebsocketListViewModel @Inject constructor(
      */
     fun refreshOfflineDevices() {
         Log.d(TAG, "Refreshing offline devices.")
-        val offlineClients = activeClients.value.values.filter { !it.deviceState.isWebsocketConnected.value }
+        val offlineClients =
+            activeClients.value.values.filter { !it.deviceState.isWebsocketConnected.value }
         offlineClients.forEach {
             it.connect()
         }

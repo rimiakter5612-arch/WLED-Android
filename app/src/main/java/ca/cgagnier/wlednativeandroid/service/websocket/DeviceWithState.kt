@@ -6,14 +6,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.model.wledapi.DeviceStateInfo
+import ca.cgagnier.wlednativeandroid.service.update.DeviceUpdateManager
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 const val AP_MODE_MAC_ADDRESS = "AP-MODE"
 
-class DeviceWithState(initialDevice: Device) {
+class DeviceWithState(
+    initialDevice: Device,
+    deviceUpdateManager: DeviceUpdateManager? = null
+) {
     var device: Device by mutableStateOf(initialDevice)
     val stateInfo: MutableState<DeviceStateInfo?> = mutableStateOf(null)
     val isWebsocketConnected: MutableState<Boolean> = mutableStateOf(false)
     // TODO: Add websocket connection status, like offline/online/connecting
+
+    val updateVersionTagFlow: Flow<String?> =
+        deviceUpdateManager?.getUpdateFlow(this) ?: flowOf(null)
 
     fun isAPMode(): Boolean {
         return device.macAddress == AP_MODE_MAC_ADDRESS

@@ -1,11 +1,14 @@
 package ca.cgagnier.wlednativeandroid.service.update
 
+import android.util.Log
 import androidx.compose.runtime.snapshotFlow
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+
+private const val TAG = "DeviceUpdateManager"
 
 class DeviceUpdateManager @Inject constructor(
     private val releaseService: ReleaseService
@@ -18,9 +21,14 @@ class DeviceUpdateManager @Inject constructor(
     fun getUpdateFlow(deviceWithState: DeviceWithState): Flow<String?> {
         return snapshotFlow { deviceWithState.stateInfo.value }
             .map { stateInfo ->
+                Log.wtf(TAG, "hello world")
                 if (stateInfo == null) return@map null
 
                 val source = UpdateSourceRegistry.getSource(stateInfo.info) ?: return@map null
+                Log.d(
+                    TAG,
+                    "Checking for software update for ${deviceWithState.device.macAddress} on ${source.githubOwner}:${source.githubRepo}"
+                )
                 releaseService.getNewerReleaseTag(
                     deviceInfo = stateInfo.info,
                     branch = deviceWithState.device.branch,

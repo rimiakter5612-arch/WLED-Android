@@ -67,24 +67,24 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
         branch: Branch,
         ignoreVersion: String,
         updateSourceDefinition: UpdateSourceDefinition,
-    ): String {
+    ): String? {
         if (deviceInfo.version.isNullOrEmpty()) {
-            return ""
+            return null
         }
 
         if (deviceInfo.brand != updateSourceDefinition.brandPattern || deviceInfo.product != updateSourceDefinition.productPattern) {
-            return ""
+            return null
         }
 
         // The options bitmask at 0x01 being 0 means OTA is disabled on the device.
         if (deviceInfo.options?.and(0x01) == 0) {
-            return ""
+            return null
         }
 
         // TODO: Modify this to use repositoryOwner and repositoryName
-        val latestVersion = getLatestVersionWithAssets(branch) ?: return ""
+        val latestVersion = getLatestVersionWithAssets(branch) ?: return null
         if (latestVersion.version.tagName == ignoreVersion) {
-            return ""
+            return null
         }
 
         val betaSuffixes = listOf("-a", "-b", "-rc")
@@ -117,13 +117,13 @@ class ReleaseService(private val versionWithAssetsRepository: VersionWithAssetsR
             ) {
                 latestVersion.version.tagName
             } else {
-                ""
+                null
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in getNewerReleaseTag: " + e.message, e)
         }
 
-        return ""
+        return null
     }
 
     private suspend fun getLatestVersionWithAssets(branch: Branch): VersionWithAssets? {

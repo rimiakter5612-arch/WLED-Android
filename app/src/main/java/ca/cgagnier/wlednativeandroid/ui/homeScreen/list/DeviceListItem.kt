@@ -20,21 +20,17 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +67,11 @@ fun DeviceListItem(
     val stateInfo by device.stateInfo
     val isOnline by device.isWebsocketConnected
 
-    var checked by remember(stateInfo?.state?.isOn) { mutableStateOf(stateInfo?.state?.isOn ?: false) }
+    var checked by remember(stateInfo?.state?.isOn) {
+        mutableStateOf(
+            stateInfo?.state?.isOn ?: false
+        )
+    }
     val haptic = LocalHapticFeedback.current
 
     DeviceTheme(device) {
@@ -230,6 +230,7 @@ fun DeviceInfoTwoRows(
     nameMaxLines: Int = 2,
 ) {
     val isOnline by device.isWebsocketConnected
+    val updateTag by device.updateVersionTagFlow.collectAsState(initial = null)
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -271,16 +272,15 @@ fun DeviceInfoTwoRows(
             deviceBatteryPercentageImage(device)
 
             // TODO: Add websocket connection status indicator
-            // TODO: Add support back for update indicator
-            //if (device.hasUpdateAvailable()) {
-            //    Icon(
-            //        painter = painterResource(R.drawable.baseline_download_24),
-            //        contentDescription = stringResource(R.string.network_status),
-            //        modifier = Modifier
-            //            .padding(start = 4.dp)
-            //            .height(20.dp)
-            //    )
-            //}
+            if (updateTag != null) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_download_24),
+                    contentDescription = stringResource(R.string.network_status),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .height(20.dp)
+                )
+            }
             if (!isOnline) {
                 Text(
                     stringResource(R.string.is_offline),
