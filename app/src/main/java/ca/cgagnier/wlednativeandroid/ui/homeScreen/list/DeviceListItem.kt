@@ -240,18 +240,6 @@ fun DeviceInfoTwoRows(
                 maxLines = nameMaxLines,
                 overflow = TextOverflow.Ellipsis
             )
-            // TODO: Evaluate if isRefreshing is still needed with websockets :)
-            // if (device.isRefreshing) {
-            //     val size =
-            //         (MaterialTheme.typography.titleSmall.lineHeight.value - 4)
-            //     CircularProgressIndicator(
-            //         modifier = Modifier
-            //             .padding(start = 10.dp)
-            //             .padding(bottom = 2.dp)
-            //             .width(size.dp)
-            //             .height(size.dp),
-            //     )
-            // }
         }
         Row(
             modifier = Modifier
