@@ -15,7 +15,20 @@
     <string name="please_enter_valid_value">Veuillez entrer une valeur valide</string>
     <string name="cancel">Annuler</string>
     <string name="default_device_name">(Nouvel appareil)</string>
-    <string name="is_offline">(Hors-ligne)</string>
+    <string name="is_offline">Hors-ligne</string>
+    <string name="offline_less_than_minute">Hors-ligne, moins d\'une minute</string>
+    <plurals name="offline_minutes">
+        <item quantity="one">Hors-ligne depuis %d minute</item>
+        <item quantity="other">Hors-ligne depuis %d minutes</item>
+    </plurals>
+    <plurals name="offline_hours">
+        <item quantity="one">Hors-ligne depuis %d heure</item>
+        <item quantity="other">Hors-ligne depuis %d heures</item>
+    </plurals>
+    <plurals name="offline_days">
+        <item quantity="one">Hors-ligne depuis %d jour</item>
+        <item quantity="other">Hors-ligne depuis %d jours</item>
+    </plurals>
     <string name="update_available">Mise à jour disponible</string>
     <string name="network_status">Statut du réseau</string>
     <string name="signal_strength">Force du signal: <xliff:g example="-62" id="strength">%1$s</xliff:g></string>
