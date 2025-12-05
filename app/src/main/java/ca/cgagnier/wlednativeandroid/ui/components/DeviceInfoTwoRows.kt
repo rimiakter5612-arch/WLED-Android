@@ -95,6 +95,11 @@ fun DeviceInfoTwoRows(
             modifier = Modifier.padding(bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // TODO: This row should be replaced with a ConstraintLayout or something similar.
+            //  This would allow for the offline message to also be truncated dynamically if
+            //  the address + offline message can't both fit. Right now, only the address can be
+            //  truncated. This is due to the limitation of the weight system of a row. When using
+            //  `fill = false`, the unused space is not distributed to the other elements.
             WebsocketStatusIndicator(device.websocketStatus.value)
             Text(
                 device.device.address,
@@ -117,7 +122,10 @@ fun DeviceInfoTwoRows(
             }
             if (!device.isOnline) {
                 OfflineSinceText(
-                    device.device, currentTime, modifier = Modifier.padding(start = 4.dp)
+                    device.device,
+                    currentTime = currentTime,
+                    modifier = Modifier
+                        .padding(start = 4.dp)
                 )
             }
             if (device.device.isHidden) {
@@ -254,8 +262,9 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
 @Composable
 fun OfflineSinceText(
     device: Device,
+    modifier: Modifier = Modifier,
     // Used to update the lastSeen message frequently, leave 0 for no updates
-    currentTime: Long = 0, modifier: Modifier = Modifier
+    currentTime: Long = 0,
 ) {
     if (device.lastSeen <= 0 || currentTime <= 0) {
         Text(
@@ -302,6 +311,7 @@ fun OfflineSinceText(
 }
 
 class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState> {
+    private val fakeCurrentTime = System.currentTimeMillis()
     override val values = sequenceOf(
         DeviceWithState(
             Device(
@@ -309,14 +319,14 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
                 address = "4.3.2.1",
                 originalName = "original name",
                 customName = "custom name",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTED
         },
         DeviceWithState(
             Device(
-                macAddress = AP_MODE_MAC_ADDRESS,
-                address = "4.3.2.1",
+                macAddress = AP_MODE_MAC_ADDRESS, address = "4.3.2.1", lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTING
@@ -325,7 +335,8 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "4.3.2.1",
-                originalName = "original name"
+                originalName = "original name",
+                lastSeen = fakeCurrentTime - TimeUnit.MINUTES.toMillis(45)
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.DISCONNECTED
@@ -334,7 +345,8 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "very-long-address-that-takes-more-than-a-full-width-so-should-be-truncated",
-                originalName = "Very long name that should also be truncated if everything is working"
+                originalName = "Very long name that should also be truncated if everything is working",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.DISCONNECTED
@@ -343,7 +355,8 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "4.3.2.1",
-                originalName = "device with battery"
+                originalName = "device with battery",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTED
@@ -373,7 +386,11 @@ fun DeviceInfoTwoRowsPreview(
             .padding(top = 20.dp)
             .fillMaxWidth()
     ) {
-        DeviceInfoTwoRows(device = device, modifier = Modifier.padding(16.dp))
+        DeviceInfoTwoRows(
+            device = device,
+            currentTime = System.currentTimeMillis(),
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 
