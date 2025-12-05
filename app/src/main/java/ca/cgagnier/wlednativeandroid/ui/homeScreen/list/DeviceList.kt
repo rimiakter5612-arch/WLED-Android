@@ -241,6 +241,7 @@ fun DeviceList(
 
             // This should help prevent weird scrolling when devices switches between online and
             // offline state. This keeps the scroll position exactly as it is currently.
+            // This is the suggested solution in https://issuetracker.google.com/issues/209652366#comment41
             SideEffect {
                 if (!listState.isScrollInProgress) {
                     listState.requestScrollToItem(
