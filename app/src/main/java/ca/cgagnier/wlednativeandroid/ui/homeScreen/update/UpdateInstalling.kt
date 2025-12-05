@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ca.cgagnier.wlednativeandroid.R
+import ca.cgagnier.wlednativeandroid.model.Device
 import ca.cgagnier.wlednativeandroid.model.VersionWithAssets
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.ui.components.deviceName
@@ -257,18 +258,27 @@ class SampleStateStepProvider : PreviewParameterProvider<UpdateInstallingState> 
     )
 }
 
+fun getPreviewDevice(): DeviceWithState {
+    return DeviceWithState(
+        Device(
+            macAddress = "00:11:22:33:44:55",
+            address = "192.168.1.123",
+            customName = "Preview Device"
+        )
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 fun UpdateInstallingDialogStepStartingPreview(
     @PreviewParameter(SampleStateStepProvider::class) state: UpdateInstallingState
 ) {
     WLEDNativeTheme(darkTheme = isSystemInDarkTheme()) {
-        // TODO: Fix this preview
-//        UpdateInstallingDialog(
-//            state = state,
-//            device = StatefulDevice.getPreviewDevice(),
-//            onDismiss = {},
-//            onToggleErrorMessage = {}
-//        )
+        UpdateInstallingDialog(
+            state = state,
+            device = getPreviewDevice(),
+            onDismiss = {},
+            onToggleErrorMessage = {}
+        )
     }
 }
