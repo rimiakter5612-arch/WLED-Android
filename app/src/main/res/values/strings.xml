@@ -15,7 +15,20 @@
     <string name="please_enter_valid_value">Please enter a valid value</string>
     <string name="cancel">Cancel</string>
     <string name="default_device_name">(New Device)</string>
-    <string name="is_offline">(Offline)</string>
+    <string name="is_offline">Offline</string>
+    <string name="offline_less_than_minute">Offline, less than a minute ago</string>
+    <plurals name="offline_minutes">
+        <item quantity="one">Offline, %d minute ago</item>
+        <item quantity="other">Offline, %d minutes ago</item>
+    </plurals>
+    <plurals name="offline_hours">
+        <item quantity="one">Offline, %d hour ago</item>
+        <item quantity="other">Offline, %d hours ago</item>
+    </plurals>
+    <plurals name="offline_days">
+        <item quantity="one">Offline, %d day ago</item>
+        <item quantity="other">Offline, %d days ago</item>
+    </plurals>
     <string name="update_available">Update Available</string>
     <string name="network_status">Network Status</string>
     <string name="signal_strength">Signal strength: <xliff:g example="-62" id="strength">%1$s</xliff:g></string>

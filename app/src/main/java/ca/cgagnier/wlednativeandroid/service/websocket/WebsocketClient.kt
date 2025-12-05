@@ -11,6 +11,7 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -127,7 +128,10 @@ class WebsocketClient(
 
     fun connect() {
         if (webSocket != null || isConnecting) {
-            Log.w(TAG, "Already connected or connecting to ${deviceState.device.address}")
+            Log.w(
+                TAG,
+                "Already connected or connecting to ${deviceState.device.address}, isConnecting: $isConnecting"
+            )
             return
         }
         isManuallyDisconnected = false
@@ -170,8 +174,14 @@ class WebsocketClient(
      * @param message The message to send.
      */
     private fun sendMessage(message: String): Boolean {
-        Log.d(TAG, "Sending message to ${deviceState.device.address}: $message")
-        return webSocket?.send(message) ?: false
+        return try {
+            Log.d(TAG, "Sending message to ${deviceState.device.address}: $message")
+            webSocket?.send(message) ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send message to ${deviceState.device.address}", e)
+            reconnect()
+            false
+        }
     }
 
     /**
@@ -194,5 +204,6 @@ class WebsocketClient(
     fun destroy() {
         Log.d(TAG, "Websocket client is destroyed for ${deviceState.device.address}")
         disconnect()
+        coroutineScope.cancel()
     }
 }

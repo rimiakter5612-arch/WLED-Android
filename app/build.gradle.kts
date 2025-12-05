@@ -72,6 +72,7 @@ ksp {
 dependencies {
     implementation(libs.androidx.graphics.shapes)
     implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.geometry)
     val composeBom = platform(libs.androidx.compose.bom)
     androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,7 +95,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.preference.ktx)
-    implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.runtime.livedata)

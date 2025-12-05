@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,12 +66,18 @@ import ca.cgagnier.wlednativeandroid.model.wledapi.Wifi
 import ca.cgagnier.wlednativeandroid.service.websocket.DeviceWithState
 import ca.cgagnier.wlednativeandroid.service.websocket.WebsocketStatus
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 
 @Composable
 fun DeviceInfoTwoRows(
     modifier: Modifier = Modifier,
     device: DeviceWithState,
+    // Used to update the lastSeen message frequently, leave 0 for no updates
+    currentTime: Long = 0,
     nameMaxLines: Int = 2,
 ) {
     val updateTag by device.updateVersionTagFlow.collectAsState(initial = null)
@@ -85,18 +92,21 @@ fun DeviceInfoTwoRows(
             )
         }
         Row(
-            modifier = Modifier
-                .padding(bottom = 2.dp),
+            modifier = Modifier.padding(bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // TODO: This row should be replaced with a ConstraintLayout or something similar.
+            //  This would allow for the offline message to also be truncated dynamically if
+            //  the address + offline message can't both fit. Right now, only the address can be
+            //  truncated. This is due to the limitation of the weight system of a row. When using
+            //  `fill = false`, the unused space is not distributed to the other elements.
             WebsocketStatusIndicator(device.websocketStatus.value)
             Text(
                 device.device.address,
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .weight(1f, fill = false)
+                modifier = Modifier.weight(1f, fill = false)
             )
             deviceNetworkStrengthImage(device)
             deviceBatteryPercentageImage(device)
@@ -111,11 +121,11 @@ fun DeviceInfoTwoRows(
                 )
             }
             if (!device.isOnline) {
-                Text(
-                    stringResource(R.string.is_offline),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp)
+                OfflineSinceText(
+                    device.device,
+                    currentTime = currentTime,
+                    modifier = Modifier
+                        .padding(start = 4.dp)
                 )
             }
             if (device.device.isHidden) {
@@ -146,13 +156,11 @@ fun WebsocketStatusIndicator(websocketState: WebsocketStatus) {
         WebsocketStatus.DISCONNECTED -> R.string.websocket_disconnected
     }
     TooltipBox(
-        positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-        tooltip = {
+        positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above), tooltip = {
             PlainTooltip {
                 Text(stringResource(tooltipTextResource))
             }
-        },
-        state = rememberTooltipState()
+        }, state = rememberTooltipState()
     ) {
         WebsocketStatusShape(websocketState)
     }
@@ -178,11 +186,8 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
     // Infinite Rotation for "Connecting" state
     val infiniteTransition = rememberInfiniteTransition(label = "Spin")
     val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
+        initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Restart
         ), label = "Rotation"
     )
 
@@ -193,9 +198,7 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
             WebsocketStatus.CONNECTED -> RoundedPolygon.circle()
             // Scalloped/Star shape = Active, Gear-like
             WebsocketStatus.CONNECTING -> RoundedPolygon.star(
-                8,
-                innerRadius = 0.7f,
-                rounding = CornerRounding(0.1f)
+                8, innerRadius = 0.7f, rounding = CornerRounding(0.1f)
             )
             // Square/Diamond = Stopped, Error
             WebsocketStatus.DISCONNECTED -> RoundedPolygon(4, rounding = CornerRounding(0.25f))
@@ -216,10 +219,8 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
         // Reset progress to 0 and animate to 1
         progress.snapTo(0f)
         progress.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
+            targetValue = 1f, animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium
             )
         )
     }
@@ -250,9 +251,7 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
                         Fill
                     }
                     drawPath(
-                        path,
-                        color = animatedColor,
-                        style = style
+                        path, color = animatedColor, style = style
                     )
                 }
             }
@@ -260,7 +259,59 @@ fun WebsocketStatusShape(websocketState: WebsocketStatus) {
     )
 }
 
+@Composable
+fun OfflineSinceText(
+    device: Device,
+    modifier: Modifier = Modifier,
+    // Used to update the lastSeen message frequently, leave 0 for no updates
+    currentTime: Long = 0,
+) {
+    if (device.lastSeen <= 0 || currentTime <= 0) {
+        Text(
+            "(${stringResource(R.string.is_offline)})",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier
+        )
+        return
+    }
+
+    val diffMillis = currentTime - device.lastSeen
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
+    val hours = TimeUnit.MILLISECONDS.toHours(diffMillis)
+    val days = TimeUnit.MILLISECONDS.toDays(diffMillis)
+
+    val offlineText = when {
+        diffMillis < 60_000 -> stringResource(R.string.offline_less_than_minute)
+        minutes < 60 -> pluralStringResource(R.plurals.offline_minutes, minutes.toInt(), minutes)
+        hours < 24 -> pluralStringResource(R.plurals.offline_hours, hours.toInt(), hours)
+        else -> pluralStringResource(R.plurals.offline_days, days.toInt(), days)
+    }
+
+    val lastSeenDate = remember(device.lastSeen) {
+        val date = Date(device.lastSeen)
+        val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        format.format(date)
+    }
+
+    TooltipBox(
+        positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above), tooltip = {
+            PlainTooltip {
+                Text(lastSeenDate)
+            }
+        }, state = rememberTooltipState()
+    ) {
+        Text(
+            text = "($offlineText)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier
+        )
+    }
+}
+
 class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState> {
+    private val fakeCurrentTime = System.currentTimeMillis()
     override val values = sequenceOf(
         DeviceWithState(
             Device(
@@ -268,14 +319,14 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
                 address = "4.3.2.1",
                 originalName = "original name",
                 customName = "custom name",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTED
         },
         DeviceWithState(
             Device(
-                macAddress = AP_MODE_MAC_ADDRESS,
-                address = "4.3.2.1",
+                macAddress = AP_MODE_MAC_ADDRESS, address = "4.3.2.1", lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTING
@@ -284,7 +335,8 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "4.3.2.1",
-                originalName = "original name"
+                originalName = "original name",
+                lastSeen = fakeCurrentTime - TimeUnit.MINUTES.toMillis(45)
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.DISCONNECTED
@@ -293,7 +345,8 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "very-long-address-that-takes-more-than-a-full-width-so-should-be-truncated",
-                originalName = "Very long name that should also be truncated if everything is working"
+                originalName = "Very long name that should also be truncated if everything is working",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.DISCONNECTED
@@ -302,13 +355,13 @@ class SampleDevicesWithStateProvider : PreviewParameterProvider<DeviceWithState>
             Device(
                 macAddress = AP_MODE_MAC_ADDRESS,
                 address = "4.3.2.1",
-                originalName = "device with battery"
+                originalName = "device with battery",
+                lastSeen = fakeCurrentTime
             )
         ).apply {
             websocketStatus.value = WebsocketStatus.CONNECTED
             stateInfo.value = DeviceStateInfo(
-                State(isOn = true, brightness = 128, transition = 7),
-                Info(
+                State(isOn = true, brightness = 128, transition = 7), Info(
                     version = "0.14.0",
                     leds = Leds(count = 60),
                     name = "WLED",
@@ -333,7 +386,11 @@ fun DeviceInfoTwoRowsPreview(
             .padding(top = 20.dp)
             .fillMaxWidth()
     ) {
-        DeviceInfoTwoRows(device = device, modifier = Modifier.padding(16.dp))
+        DeviceInfoTwoRows(
+            device = device,
+            currentTime = System.currentTimeMillis(),
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 
