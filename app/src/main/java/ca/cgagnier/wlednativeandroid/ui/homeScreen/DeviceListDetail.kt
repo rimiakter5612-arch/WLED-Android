@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
@@ -231,8 +234,11 @@ private fun DrawerContent(
     openSettings: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val scrollState = rememberScrollState()
 
-    Column {
+    Column(
+        modifier = Modifier.verticalScroll(scrollState)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -299,7 +305,7 @@ private fun DrawerContent(
             },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(24.dp))
         Column(
             modifier = Modifier
                 .padding(16.dp)
